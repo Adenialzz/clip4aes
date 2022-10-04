@@ -1,0 +1,9 @@
+# python
+__pycache__/
+
+# log
+*.out
+*.log
+
+# results
+*.json
