@@ -15,11 +15,11 @@ def freeze_weights(model, remain_keys, n_remain_last_layer=None):
                 continue
             params.requires_grad = False
 
-def calc_aesthetic_metrics(output, label, bin_label, device):
+def calc_aesthetic_metrics(output, label, bin_label):
         batch_size = output.shape[0]
         # calculate the cc of mean score
-        pscore_np = get_score(output, device).cpu().detach().numpy()
-        tscore_np = get_score(label, device).cpu().detach().numpy()
+        pscore_np = get_score(output).cpu().detach().numpy()
+        tscore_np = get_score(label).cpu().detach().numpy()
 
         plcc_mean = pearsonr(pscore_np, tscore_np)[0]
         srcc_mean = spearmanr(pscore_np, tscore_np)[0]
@@ -81,12 +81,12 @@ def accuracy(output, target, topk=(1, )):
             res.append(correct_k.mul_(100.0 / batch_size))
         return [acc.item() for acc in res]
 
-def get_score(score_distri, device):
+def get_score(score_distri):
     '''
     score_distri shape:  batch_size * 10
     '''
     w = torch.from_numpy(np.linspace(1, 10, 10))
-    w = w.type(torch.FloatTensor).to(device)
+    w = w.type(torch.FloatTensor).to(score_distri.device)
     w_batch = w.repeat(score_distri.size(0), 1)
 
     score = (score_distri * w_batch).sum(dim=1)

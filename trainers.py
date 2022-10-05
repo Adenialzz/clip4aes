@@ -192,7 +192,7 @@ class AesTrainer(BaseTrainer):
                 loss.backward()
                 self.optimizer.step()
 
-            acc, plcc_mean, srcc_mean, plcc_std, srcc_std = calc_aesthetic_metrics(output, label, bin_label, output.device)
+            acc, plcc_mean, srcc_mean, plcc_std, srcc_std = calc_aesthetic_metrics(output, label, bin_label)
 
             _loss.update(loss.item())
             _plcc_mean.update(plcc_mean)
