@@ -66,7 +66,7 @@ class AVADataset(Dataset):
         img_name = os.path.join(self.root_dir, str(self.annotations.iloc[idx, 0]) + '.jpg')
         image = Image.open(img_name).convert('RGB')
         annotations = self.annotations.iloc[idx, 1: 11].to_numpy()
-        annotations = annotations.astype('float').reshape(-1, 1)
+        annotations = annotations.astype('float').reshape(-1)
         tri_cls = int(self.annotations.iloc[idx, 11])
         bin_cls = int(self.annotations.iloc[idx, 12])
         sample = {'img_id': img_name, 'image': image, 'annotations': annotations, 'tri_cls': tri_cls, 'bin_cls': bin_cls}

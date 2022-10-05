@@ -1,6 +1,8 @@
-
 import torch
 import numpy as np
+from scipy.stats import pearsonr
+from scipy.stats import spearmanr
+from sklearn import metrics
 
 def freeze_weights(model, remain_keys, n_remain_last_layer=None):
     if n_remain_last_layer is not None:
@@ -13,7 +15,32 @@ def freeze_weights(model, remain_keys, n_remain_last_layer=None):
                 continue
             params.requires_grad = False
 
+def calc_aesthetic_metrics(output, label, bin_label, device):
+        batch_size = output.shape[0]
+        # calculate the cc of mean score
+        pscore_np = get_score(output, device).cpu().detach().numpy()
+        tscore_np = get_score(label, device).cpu().detach().numpy()
 
+        plcc_mean = pearsonr(pscore_np, tscore_np)[0]
+        srcc_mean = spearmanr(pscore_np, tscore_np)[0]
+
+        # calculate the cc of std.dev
+        pstd_np = torch.std(output, dim=1).cpu().detach().numpy()
+        tstd_np = torch.std(label, dim=1).cpu().detach().numpy()
+
+        plcc_std = pearsonr(pstd_np, tstd_np)[0]
+        srcc_std = spearmanr(pstd_np, tstd_np)[0]
+
+        # calculate the classification result of emd
+        emd_class_pred = torch.zeros((batch_size))
+        for idx in range(batch_size):
+            if pscore_np[idx] < 5:
+                emd_class_pred[idx] = 0.0
+            elif pscore_np[idx] >= 5:
+                emd_class_pred[idx] = 1.0
+
+        acc = metrics.accuracy_score(bin_label, emd_class_pred)
+        return acc, plcc_mean, srcc_mean, plcc_std, srcc_std
 
 class AverageMeter(object):
     '''

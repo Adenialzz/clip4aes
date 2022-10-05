@@ -5,7 +5,7 @@ import os.path as osp
 import logging
 from torch.utils.data import DataLoader
 from torch.optim import SGD, Adam
-from utils import AverageMeter, get_score, emd_loss, accuracy
+from utils import AverageMeter, get_score, emd_loss, accuracy, calc_aesthetic_metrics
 from sklearn import metrics
 from tensorboardX import SummaryWriter
 from scipy.stats import pearsonr
@@ -177,11 +177,10 @@ class AesTrainer(BaseTrainer):
         _srcc_mean = AverageMeter()
         _plcc_std = AverageMeter()
         _srcc_std = AverageMeter()
-        for epoch_step, data in enumerate(loader):
+        for batch_idx, data in enumerate(loader):
             image = data["image"].to(self.device)
-            label = data["annotations"].to(self.device).squeeze(dim=2)
+            label = data["annotations"].to(self.device)
             bin_label = data["bin_cls"]
-            batch_size = image.shape[0]
 
             if isTrain:
                 self.optimizer.zero_grad()
@@ -193,39 +192,18 @@ class AesTrainer(BaseTrainer):
                 loss.backward()
                 self.optimizer.step()
 
-            # calculate the cc of mean score
-            pscore_np = get_score(output, self.device).cpu().detach().numpy()
-            tscore_np = get_score(label, self.device).cpu().detach().numpy()
-
-            plcc_mean = pearsonr(pscore_np, tscore_np)[0]
-            srcc_mean = spearmanr(pscore_np, tscore_np)[0]
-
-            # calculate the cc of std.dev
-            pstd_np = torch.std(output, dim=1).cpu().detach().numpy()
-            tstd_np = torch.std(label, dim=1).cpu().detach().numpy()
-
-            plcc_std = pearsonr(pstd_np, tstd_np)[0]
-            srcc_std = spearmanr(pstd_np, tstd_np)[0]
+            acc, plcc_mean, srcc_mean, plcc_std, srcc_std = calc_aesthetic_metrics(output, label, bin_label, output.device)
 
             _loss.update(loss.item())
             _plcc_mean.update(plcc_mean)
             _srcc_mean.update(srcc_mean)
             _plcc_std.update(plcc_std)
             _srcc_std.update(srcc_std)
-
-            # calculate the classification result of emd
-            emd_class_pred = torch.zeros((batch_size))
-            for idx in range(batch_size):
-                if pscore_np[idx] < 5:
-                    emd_class_pred[idx] = 0.0
-                elif pscore_np[idx] >= 5:
-                    emd_class_pred[idx] = 1.0
-
-            acc = metrics.accuracy_score(bin_label, emd_class_pred)
             _acc.update(acc)
-            if epoch_step % self.cfg.log_freq == 0:
-                self.logger.info("step: {} | loss: {:.4f}, acc: {:.2f}, cc: {:.4f}, {:.4f}, {:.4f}, {:.4f}"
-                .format(epoch_step, _loss.avg, _acc.avg, _plcc_mean.avg, _srcc_mean.avg, _plcc_std.avg, _srcc_std.avg))
+
+            if  batch_idx % self.cfg.log_freq == 0:
+                self.logger.info("epoch: {}, step: {} | loss: {:.4f}, acc: {:.2f}, cc: {:.4f}, {:.4f}, {:.4f}, {:.4f}"
+                .format(epoch, batch_idx, _loss.avg, _acc.avg, _plcc_mean.avg, _srcc_mean.avg, _plcc_std.avg, _srcc_std.avg))
 
             # break
         metrics_result = {}
