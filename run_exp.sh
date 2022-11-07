@@ -4,10 +4,10 @@ mode=$1
 
 # args
 lr=1e-2
-arch=ViT-B/32
-# arch=vit_base_patch32_224_in21k
+# arch=ViT-B/16
+arch=blip
 batch_size=128
-job_name=${arch//\//\-}_lr${lr}xbs${batch_size}
+job_name=${arch//\//\-}_lr${lr}xbs${batch_size}_noBias
 
 if [ $mode = debug ]; then
 	out_path=/media/song/myNull
@@ -29,8 +29,9 @@ python -u main.py \
 	--epochs 100 \
 	--arch $arch \
 	--lr $lr \
+	--data-root /home/song/AVA/ \
 	--batchSize $batch_size \
 	--num-workers 10 \
-	--device cuda:1 \
+	--device cuda:0 \
 	--out-path $out_path \
 	# --freeze-feats

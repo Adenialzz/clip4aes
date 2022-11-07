@@ -5,11 +5,8 @@ import os.path as osp
 import logging
 from torch.utils.data import DataLoader
 from torch.optim import SGD, Adam
-from utils import AverageMeter, get_score, emd_loss, accuracy, calc_aesthetic_metrics
-from sklearn import metrics
+from utils import AverageMeter, emd_loss, calc_aesthetic_metrics, get_parameter_number
 from tensorboardX import SummaryWriter
-from scipy.stats import pearsonr
-from scipy.stats import spearmanr
 
 class BaseTrainer:
     def __init__(self, cfg, model, dataset_list, metrics_list):
@@ -54,6 +51,9 @@ class BaseTrainer:
 
     def init_model(self, model):
         self.model = model.to(self.device)
+        num_params_dict = get_parameter_number(self.model)
+        for k, v in num_params_dict.items():
+            self.logger.info(f"{k}: {v / 1e6 :.3f}M")
 
     def init_dataloader(self, train_set, val_set):
         self.train_loader = DataLoader(

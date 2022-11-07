@@ -9,15 +9,24 @@ class MLP(torch.nn.Module):
     def forward(self, x):
         return self.fc(x)
 
+class BLIP4AesFormer(torch.nn.Module):
+    def __init__(self, device, out_len=10, fc_bias=False):
+        super().__init__()
+        from lavis.models import load_model_and_preprocess
+        self.blip_model, preprocessors, _ = load_model_and_preprocess('blip_feature_extractor', model_type='base', is_eval=True, device=device)
+        self.preprocess = preprocessors['eval']
+        self.aes_fc = torch.nn.Linear(768, out_len, bias=fc_bias)
+
+    def forward(self, x):
+        feat = self.blip_model.extract_features({'image': x}, mode='image').image_embeds[:, 0]
+        return self.aes_fc(feat)
+            
+
 class CLIP4AesFormer(torch.nn.Module):
-    def __init__(self, arch, device, out_len=10):
+    def __init__(self, arch, device, out_len=10, fc_bias=False):
         super().__init__()
         self.clip_model, self.preprocess = clip.load(arch, device)
-        self.aes_fc = torch.nn.Linear(list(self.clip_model.parameters())[-1].shape[0], out_len)
-
-    def freeze_feats(self):
-        for params in self.clip_model.visual.parameters():
-            params.requires_grad = False
+        self.aes_fc = torch.nn.Linear(list(self.clip_model.parameters())[-1].shape[0], out_len, bias=fc_bias)
 
     def forward(self, x):
         x = x.type(self.clip_model.dtype)

@@ -4,16 +4,23 @@ from scipy.stats import pearsonr
 from scipy.stats import spearmanr
 from sklearn import metrics
 
+def get_parameter_number(model):
+    total_num = sum(p.numel() for p in model.parameters())
+    trainable_num = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    return {'Num of Total Parameters': total_num, 'Num of Trainable Parameters': trainable_num}
+
 def freeze_weights(model, remain_keys, n_remain_last_layer=None):
     if n_remain_last_layer is not None:
         loop = list(model.named_parameters())[: - n_remain_last_layer]
     else:
         loop = model.named_parameters()
     for name, params in loop:
+        if_remain = False
         for k in remain_keys:
             if k in name:
-                continue
-            params.requires_grad = False
+                if_remain = True
+                break
+        params.requires_grad = if_remain
 
 def calc_aesthetic_metrics(output, label, bin_label):
         batch_size = output.shape[0]
