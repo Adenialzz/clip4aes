@@ -53,7 +53,7 @@ def main(cfg):
             # image_features /= image_features.norm(dim=-1, keepdim=True)
             output = (image_features @ text_features.T).softmax(dim=-1)
 
-            acc, plcc_mean, srcc_mean, plcc_std, srcc_std = calc_aesthetic_metrics(output, label, bin_label)
+            acc, plcc_mean, srcc_mean, plcc_std, srcc_std = calc_aesthetic_metrics(output, label)
             loss = emd_loss(output, label)
 
             _acc.update(acc)

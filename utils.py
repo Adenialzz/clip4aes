@@ -22,32 +22,37 @@ def freeze_weights(model, remain_keys, n_remain_last_layer=None):
                 break
         params.requires_grad = if_remain
 
-def calc_aesthetic_metrics(output, label, bin_label):
-        batch_size = output.shape[0]
-        # calculate the cc of mean score
-        pscore_np = get_score(output).cpu().detach().numpy()
-        tscore_np = get_score(label).cpu().detach().numpy()
+def get_bin_result(score_np):
+    bs = score_np.shape[0]
+    bin_result = torch.zeros((bs))
+    for idx in range(bs):
+        if score_np[idx] < 5:
+            bin_result[idx] = 0.0
+        elif score_np[idx] >= 5:
+            bin_result[idx] = 1.0
+    return bin_result
 
-        plcc_mean = pearsonr(pscore_np, tscore_np)[0]
-        srcc_mean = spearmanr(pscore_np, tscore_np)[0]
+def calc_aesthetic_metrics(output, label):
+    # calculate the cc of mean score
+    pscore_np = get_score(output).cpu().detach().numpy()
+    tscore_np = get_score(label).cpu().detach().numpy()
 
-        # calculate the cc of std.dev
-        pstd_np = torch.std(output, dim=1).cpu().detach().numpy()
-        tstd_np = torch.std(label, dim=1).cpu().detach().numpy()
+    plcc_mean = pearsonr(pscore_np, tscore_np)[0]
+    srcc_mean = spearmanr(pscore_np, tscore_np)[0]
 
-        plcc_std = pearsonr(pstd_np, tstd_np)[0]
-        srcc_std = spearmanr(pstd_np, tstd_np)[0]
+    # calculate the cc of std.dev
+    pstd_np = torch.std(output, dim=1).cpu().detach().numpy()
+    tstd_np = torch.std(label, dim=1).cpu().detach().numpy()
 
-        # calculate the classification result of emd
-        emd_class_pred = torch.zeros((batch_size))
-        for idx in range(batch_size):
-            if pscore_np[idx] < 5:
-                emd_class_pred[idx] = 0.0
-            elif pscore_np[idx] >= 5:
-                emd_class_pred[idx] = 1.0
+    plcc_std = pearsonr(pstd_np, tstd_np)[0]
+    srcc_std = spearmanr(pstd_np, tstd_np)[0]
 
-        acc = metrics.accuracy_score(bin_label, emd_class_pred)
-        return acc, plcc_mean, srcc_mean, plcc_std, srcc_std
+    # calculate the classification result of emd
+    bin_label = get_bin_result(tscore_np)
+    bin_pred = get_bin_result(pscore_np)
+
+    acc = metrics.accuracy_score(bin_label, bin_pred)
+    return acc, plcc_mean, srcc_mean, plcc_std, srcc_std
 
 class AverageMeter(object):
     '''
